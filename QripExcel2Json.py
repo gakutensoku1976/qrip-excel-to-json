@@ -38,7 +38,7 @@ def ConvertExcelDir(directory):
                 print("変換処理を実行せずにプログラムを終了します。")
                 exe_flag = False
             else:
-                print("不正な入力({0})です。プログラムを終了します。".format(user_input))
+                print(f"不正な入力({user_input})です。プログラムを終了します。")
                 exe_flag = False
 
         if exe_flag:
@@ -57,14 +57,22 @@ def print_args(argv):
 def IsQripExcelFormat(active_sheet):
 
     if active_sheet.title == '入力欄' or str(active_sheet['A1'].value) == JSON_VERSION:
-
-        #参加者が二人以上いるか?
+        # 参加者が二人以上いるか?
         if active_sheet['A19'].value is None or active_sheet['A20'].value is None:
             return False
         else:
             return True
     else:
         return False
+
+# 名前文字列の正規化 (全角半角スペースを削除、全角英数字を半角に変換、全角記号を半角に変換)
+def normalize_name(name):
+    name = name.replace(' ', '')
+    name = name.translate(str.maketrans('０１２３４５６７８９','0123456789'))
+    name = name.translate(str.maketrans('ａｂｃｄｅｆｇｈｉｊｋｌｍｎｏｐｑｒｓｔｕｖｗｘｙｚ','abcdefghijklmnopqrstuvwxyz'))
+    name = name.translate(str.maketrans('ＡＢＣＤＥＦＧＨＩＪＫＬＭＮＯＰＱＲＳＴＵＶＷＸＹＺ','ABCDEFGHIJKLMNOPQRSTUVWXYZ'))
+    name = name.translate(str.maketrans('！＂＃＄％＆＇（）＊＋，－．／：；＜＝＞？＠［￥］＾＿｀｛｜｝～','!"#$%&\'()*+,-./:;<=>?@[¥]^_`{|}~'))
+    return name
 
 def Sheet2Json(active_sheet,excel_file_path):
 
@@ -86,6 +94,7 @@ def Sheet2Json(active_sheet,excel_file_path):
         value = active_sheet.cell(row=row_num, column=3).value
 
         if name == 'period':
+            # 'period' は 'end' - 'start' で計算される値であるため、変換時には無視して None を設定する
             meta_data[name] = None
         elif isinstance(value, datetime): 
             meta_data[name] = datetime.strftime(value, "%Y/%m/%d %H:%M")
@@ -100,21 +109,18 @@ def Sheet2Json(active_sheet,excel_file_path):
 
         places_data = {}
 
-        # places_data['name'] = active_sheet.cell(row=row_number, column=1).value
-        player_name = str(active_sheet.cell(row=row_number, column=1).value)
-        player_name = player_name.replace("　","")
-        player_name = player_name.replace(" ","")
-        places_data['name'] = player_name
-
-        result_data = {}
-        result_data['rank'] = active_sheet.cell(row=row_number, column=2).value
-        result_data['round'] = active_sheet.cell(row=row_number, column=3).value
-        result_data['point'] = active_sheet.cell(row=row_number, column=4).value
-        result_data['maru'] = active_sheet.cell(row=row_number, column=5).value
-        result_data['miss'] = active_sheet.cell(row=row_number, column=6).value
-        result_data['winout'] = active_sheet.cell(row=row_number, column=7).value
-        result_data['fail'] = active_sheet.cell(row=row_number, column=8).value
-        result_data['comment'] = active_sheet.cell(row=row_number, column=9).value
+        places_data['name'] = normalize_name(str(active_sheet.cell(row=row_number, column=1).value))
+        
+        result_data = {
+           'rank': active_sheet.cell(row=row_number, column=2).value,
+           'round': active_sheet.cell(row=row_number, column=3).value,
+           'point': active_sheet.cell(row=row_number, column=4).value,
+           'maru': active_sheet.cell(row=row_number, column=5).value,
+           'miss': active_sheet.cell(row=row_number, column=6).value,
+           'winout': active_sheet.cell(row=row_number, column=7).value,
+           'fail': active_sheet.cell(row=row_number, column=8).value,
+           'comment': active_sheet.cell(row=row_number, column=9).value
+           }
 
         places_data['result'] = result_data
 
@@ -133,7 +139,7 @@ def Sheet2Json(active_sheet,excel_file_path):
         with open(json_file_path, 'w', encoding='utf-8') as file:
             json.dump(qric_json, file, indent=4, ensure_ascii=False)
             if is_running_from_cmd():
-                print('【出力】{0}'.format(json_file_path))
+                print(f'【出力】{json_file_path}')
     except Exception as e:
         print(f"ファイル書き込み時にエラー発生: {e}")
 
@@ -158,7 +164,6 @@ def main():
         ConvertExcelDir(os.getcwd())
 
     elif len(sys.argv) == 2:
-
         # 引数が1個だったら、Excelファイルか対象フォルダ
         target_path = sys.argv[1]
         if os.path.isfile(target_path):
