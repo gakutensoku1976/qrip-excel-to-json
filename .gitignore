@@ -1,0 +1,7 @@
+*.exe
+*.xlsx
+*.json
+*.ipynb
+*.spec
+dist/
+build/
