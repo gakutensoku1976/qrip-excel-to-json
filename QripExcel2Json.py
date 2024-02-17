@@ -56,7 +56,7 @@ def print_args(argv):
 
 def IsQripExcelFormat(active_sheet):
 
-    if active_sheet.title == '入力欄' or str(active_sheet['A1'].value) == JSON_VERSION:
+    if active_sheet.title == INPUT_SHEET_NAME or str(active_sheet['A1'].value) == JSON_VERSION:
         # 参加者が二人以上いるか?
         if active_sheet['A19'].value is None or active_sheet['A20'].value is None:
             return False
@@ -85,6 +85,7 @@ def Sheet2Json(active_sheet,excel_file_path):
     # メタデータ
     METADATA_START_ROW = 3
     METADATA_END_ROW = 16
+    PLAYER_START_ROW = 19
 
     meta_data = {}
     for row_num in range(METADATA_START_ROW,METADATA_END_ROW):
@@ -104,7 +105,7 @@ def Sheet2Json(active_sheet,excel_file_path):
     qric_json['meta'] = meta_data
 
     player_list = []
-    row_number = 19
+    row_number = PLAYER_START_ROW
     while active_sheet.cell(row=row_number, column=1).value is not None:
 
         places_data = {}
