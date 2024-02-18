@@ -4,9 +4,19 @@ import os
 import sys
 from datetime import datetime
 import warnings
+import yaml
 
 INPUT_SHEET_NAME = '入力欄'
 JSON_VERSION = '20230910'
+
+# 設定値を保持するグローバル変数
+config = None
+
+# 設定ファイル config.yml から設定を読み込む
+def load_config():
+    global config
+    with open('QripExcel2Json.config', 'r', encoding='utf-8') as f:
+        config = json.load(f)
 
 def is_running_from_cmd():
     try:
@@ -65,13 +75,18 @@ def IsQripExcelFormat(active_sheet):
     else:
         return False
 
-# 名前文字列の正規化 (全角半角スペースを削除、全角英数字を半角に変換、全角記号を半角に変換)
 def normalize_name(name):
-    name = name.replace(' ', '')
-    name = name.translate(str.maketrans('０１２３４５６７８９','0123456789'))
-    name = name.translate(str.maketrans('ａｂｃｄｅｆｇｈｉｊｋｌｍｎｏｐｑｒｓｔｕｖｗｘｙｚ','abcdefghijklmnopqrstuvwxyz'))
-    name = name.translate(str.maketrans('ＡＢＣＤＥＦＧＨＩＪＫＬＭＮＯＰＱＲＳＴＵＶＷＸＹＺ','ABCDEFGHIJKLMNOPQRSTUVWXYZ'))
-    name = name.translate(str.maketrans('！＂＃＄％＆＇（）＊＋，－．／：；＜＝＞？＠［￥］＾＿｀｛｜｝～','!"#$%&\'()*+,-./:;<=>?@[¥]^_`{|}~'))
+    global config
+
+    for remove_item in config['name_normalization']['remove']:
+        name = name.replace(remove_item, '')
+
+    for replace_item in config['name_normalization']['replace']:
+        name = name.replace(replace_item['from'],replace_item['to'])
+
+    for translate_item in config['name_normalization']['translate']:
+        name = name.translate(str.maketrans(translate_item['from'],translate_item['to']))
+
     return name
 
 def Sheet2Json(active_sheet,excel_file_path):
@@ -85,7 +100,6 @@ def Sheet2Json(active_sheet,excel_file_path):
     # メタデータ
     METADATA_START_ROW = 3
     METADATA_END_ROW = 16
-    PLAYER_START_ROW = 19
 
     meta_data = {}
     for row_num in range(METADATA_START_ROW,METADATA_END_ROW):
@@ -103,6 +117,10 @@ def Sheet2Json(active_sheet,excel_file_path):
             meta_data[name] = value
 
     qric_json['meta'] = meta_data
+
+    # プレイヤーデータ
+
+    PLAYER_START_ROW = 19
 
     player_list = []
     row_number = PLAYER_START_ROW
@@ -126,6 +144,7 @@ def Sheet2Json(active_sheet,excel_file_path):
         places_data['result'] = result_data
 
         player_list.append(places_data)
+
         row_number += 1
 
     match_data = {}
@@ -159,6 +178,8 @@ def Excel2Json(excel_file_path):
 
 def main():
     warnings.filterwarnings("ignore", category=UserWarning, module="openpyxl.worksheet._reader")
+
+    load_config()
 
     if len(sys.argv) == 1:
         # 引数が指定されていなければ、カレントディレクトリに対して処理
