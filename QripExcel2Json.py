@@ -4,7 +4,6 @@ import os
 import sys
 from datetime import datetime
 import warnings
-import yaml
 
 INPUT_SHEET_NAME = '入力欄'
 JSON_VERSION = '20230910'
